@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const { first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact_name, emergency_contact_phone } = body
 
-    const patient = await queryOne<Patient>(
+    const patient = await queryOne(
       `UPDATE patients SET
         first_name = COALESCE($1, first_name),
         last_name = COALESCE($2, last_name),
