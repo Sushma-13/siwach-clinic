@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS visits (
 );
 
 -- Appointments table
-CREATE TABLE IF NOT EXISTS appointments (
+CREATE TABLE IF NOT EXISTS appointmentss (
   id SERIAL PRIMARY KEY,
   patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   doctor_id INTEGER REFERENCES users(id),
@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS appointments (
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(last_name, first_name);
 CREATE INDEX IF NOT EXISTS idx_visits_patient ON visits(patient_id);
-CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);
-CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointments(patient_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointmentss(appointment_date);
+CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointmentss(patient_id);
 
 -- Updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -90,7 +90,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
-  CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments
+  CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointmentss
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 `;

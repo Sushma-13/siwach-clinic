@@ -54,14 +54,14 @@ async function seed() {
       ($1, $9, NOW() - INTERVAL '90 days', 'Neck stiffness', 'Cervical spondylosis', 'Muscle relaxants, physiotherapy', 'Initial presentation', CURRENT_DATE - 30, 'completed'),
       ($5, $10, NOW() - INTERVAL '3 days', 'Knee pain worsening', 'Meniscus tear', 'MRI ordered, rest and ice', 'Athlete - urgent care needed', CURRENT_DATE + 7, 'completed'),
       ($6, $9, NOW() - INTERVAL '1 day', 'Ankle sprain from sports', 'Grade II lateral ankle sprain', 'RICE protocol, brace', 'First visit', CURRENT_DATE + 14, 'completed'),
-      ($7, $10, NOW() - INTERVAL '45 days', 'Chronic hip pain', 'Avascular necrosis Stage II', 'Core decompression planned', 'Staged treatment plan', CURRENT_DATE + 30, 'completed')
-      ON CONFLICT DO NOTHING;
+      ($7, $10, NOW() - INTERVAL '45 days', 'Chronic hip pain', 'Avascular necrosis Stage II', 'Core decompression planned', 'Staged treatment plan', CURRENT_DATE + 30, 'completed'),
+      ($8, $9, NOW() - INTERVAL '5 days', 'Wrist pain after fall', 'Distal radius fracture', 'Cast immobilization', 'Follow-up X-ray in 3 weeks', CURRENT_DATE + 21, 'completed');
     `, [pIds[0], pIds[1], pIds[2], pIds[3], pIds[4], pIds[5], pIds[6], pIds[7], dIds[0], dIds[1] || dIds[0]]);
 
     // Seed appointments (today and future)
     const today = new Date().toISOString().split('T')[0];
     await pool.query(`
-      INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, status)
+      INSERT INTO appointmentss (patient_id, doctor_id, appointment_date, appointment_time, reason, status)
       VALUES
       ($1, $9, $11, '09:00', 'Follow-up for L4-L5 disc herniation', 'scheduled'),
       ($2, $10, $11, '09:30', 'Knee pain review', 'scheduled'),
@@ -70,10 +70,9 @@ async function seed() {
       ($6, $9, $11, '11:00', 'Ankle sprain follow-up', 'scheduled'),
       ($4, $10, $11, '11:30', 'Hip replacement 3-month review', 'completed'),
       ($7, $9, $11, '12:00', 'Pre-op consultation', 'scheduled'),
-      ($8, $10, $11 + '::date + 1', '09:00', 'New patient evaluation', 'scheduled'),
-      ($1, $9, $11 + '::date + 2', '10:00', 'Physiotherapy assessment', 'scheduled'),
-      ($2, $10, $11 + '::date + 3', '09:30', 'Injection therapy', 'scheduled')
-      ON CONFLICT DO NOTHING;
+      ($8, $10, $11::date + INTERVAL '1 day', '09:00', 'New patient evaluation', 'scheduled'),
+      ($1, $9, $11::date + INTERVAL '2 days', '10:00', 'Physiotherapy assessment', 'scheduled'),
+      ($2, $10, $11::date + INTERVAL '3 days', '09:30', 'Injection therapy', 'scheduled');
     `, [pIds[0], pIds[1], pIds[2], pIds[3], pIds[4], pIds[5], pIds[6], pIds[7], dIds[0], dIds[1] || dIds[0], today]);
   }
 

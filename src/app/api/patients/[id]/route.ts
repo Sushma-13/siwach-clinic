@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, queryOne } from '@/lib/db'
+import { queryOne } from '@/lib/db'
 import { verifyToken, COOKIE_NAME } from '@/lib/auth'
-import type { Patient, Visit } from '@/types'
 
 function getUser(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value
@@ -20,24 +19,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 })
 
   try {
-    const patient = await queryOne<Patient>('SELECT * FROM patients WHERE id = $1', [id])
+    const patient = await queryOne('SELECT * FROM patient_master_data WHERE patient_uhid = $1', [id])
     if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
 
-    const visits = await query<Visit & { doctor_name: string }>(
-      `SELECT v.*, u.name as doctor_name FROM visits v
-       LEFT JOIN users u ON u.id = v.doctor_id
-       WHERE v.patient_id = $1 ORDER BY v.visit_date DESC`,
-      [id]
-    )
-
-    const appointments = await query(
-      `SELECT a.*, u.name as doctor_name FROM appointments a
-       LEFT JOIN users u ON u.id = a.doctor_id
-       WHERE a.patient_id = $1 ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
-      [id]
-    )
-
-    return NextResponse.json({ data: { patient, visits, appointments } })
+    return NextResponse.json({ data: { patient } })
   } catch (err) {
     console.error('GET patient error:', err)
     return NextResponse.json({ error: 'Failed to fetch patient' }, { status: 500 })

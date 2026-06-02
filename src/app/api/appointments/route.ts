@@ -8,7 +8,6 @@ function getUser(req: NextRequest) {
   return verifyToken(token)
 }
 
-// GET /api/appointments
 export async function GET(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -16,6 +15,25 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date')
   const status = searchParams.get('status')
+  const start = searchParams.get('start')
+  const end = searchParams.get('end')
+
+  // Return counts grouped by date for a range (used by week picker)
+  if (start && end) {
+    try {
+      const counts = await query<{ date: string; count: number }>(
+        `SELECT TO_CHAR(appointment_date, 'YYYY-MM-DD') as date, COUNT(*)::int as count
+         FROM appointments
+         WHERE appointment_date >= $1::date AND appointment_date <= $2::date
+         GROUP BY appointment_date`,
+        [start, end]
+      )
+      return NextResponse.json({ data: counts })
+    } catch (err) {
+      console.error('GET appointment counts error:', err)
+      return NextResponse.json({ error: 'Failed to fetch counts' }, { status: 500 })
+    }
+  }
 
   try {
     const conditions: string[] = ['1=1']
@@ -23,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     if (date) {
       params.push(date)
-      conditions.push(`a.appointment_date = $${params.length}`)
+      conditions.push(`a.appointment_date = $${params.length}::date`)
     }
     if (status) {
       params.push(status)
@@ -31,11 +49,11 @@ export async function GET(req: NextRequest) {
     }
 
     const appointments = await query(
-      `SELECT a.*, p.first_name || ' ' || p.last_name as patient_name,
-              p.phone as patient_phone, u.name as doctor_name
+      `SELECT a.appointment_id, TO_CHAR(a.appointment_date, 'YYYY-MM-DD') as appointment_date,
+              a.appointment_time::text, a.doctor_name, a.description, a.status,
+              a.patient_uhid, p.full_name as patient_name, p.whatsapp_no as patient_phone
        FROM appointments a
-       JOIN patients p ON p.id = a.patient_id
-       LEFT JOIN users u ON u.id = a.doctor_id
+       LEFT JOIN patient_master_data p ON p.patient_uhid = a.patient_uhid
        WHERE ${conditions.join(' AND ')}
        ORDER BY a.appointment_date ASC, a.appointment_time ASC`,
       params
@@ -48,23 +66,22 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/appointments
 export async function POST(req: NextRequest) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const body = await req.json()
-    const { patient_id, doctor_id, appointment_date, appointment_time, reason, notes } = body
+    const { patient_uhid, appointment_date, appointment_time, doctor_name, description } = body
 
-    if (!patient_id || !appointment_date || !appointment_time) {
-      return NextResponse.json({ error: 'Patient, date and time are required' }, { status: 400 })
+    if (!patient_uhid || !appointment_date || !appointment_time || !doctor_name) {
+      return NextResponse.json({ error: 'Patient, date, time and doctor are required' }, { status: 400 })
     }
 
     const appointment = await queryOne(
-      `INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, reason, notes)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [patient_id, doctor_id || user.userId, appointment_date, appointment_time, reason || null, notes || null]
+      `INSERT INTO appointments (patient_uhid, appointment_date, appointment_time, doctor_name, description, status)
+       VALUES ($1, $2::date, $3, $4, $5, 'booked') RETURNING *`,
+      [patient_uhid, appointment_date, appointment_time, doctor_name, description || null]
     )
 
     return NextResponse.json({ data: appointment, message: 'Appointment created' }, { status: 201 })
