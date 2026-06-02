@@ -185,15 +185,15 @@ export default function LoginPage() {
             </form>
 
             {/* Demo credentials */}
-            <div className="mt-6 p-4 rounded-xl" style={{ background: 'var(--color-primary-light)' }}>
-              <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-primary-dark)' }}>
-                Demo credentials
-              </p>
-              <div className="space-y-1 text-xs" style={{ color: 'var(--color-primary-dark)', opacity: 0.8 }}>
-                <p>Admin: admin@siwachsanjeevani.com / admin123</p>
-                <p>Doctor: priya@siwachsanjeevani.com / doctor123</p>
-              </div>
-            </div>
+            {/*<div className="mt-6 p-4 rounded-xl" style={{ background: 'var(--color-primary-light)' }}>*/}
+            {/*  <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-primary-dark)' }}>*/}
+            {/*    Demo credentials*/}
+            {/*  </p>*/}
+            {/*  <div className="space-y-1 text-xs" style={{ color: 'var(--color-primary-dark)', opacity: 0.8 }}>*/}
+            {/*    <p>Admin: admin@siwachsanjeevani.com / admin123</p>*/}
+            {/*    <p>Doctor: priya@siwachsanjeevani.com / doctor123</p>*/}
+            {/*  </div>*/}
+            {/*</div>*/}
           </div>
         </div>
       </div>
