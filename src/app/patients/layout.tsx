@@ -7,6 +7,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   // Next.js 16: cookies() is async - must be awaited
   const cookieStore = await cookies()
   const token = cookieStore.get('siwach_auth_token')?.value
+  
   if (!token) redirect('/login')
   const user = verifyToken(token)
   if (!user) redirect('/login')

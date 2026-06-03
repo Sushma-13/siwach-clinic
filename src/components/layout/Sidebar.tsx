@@ -16,6 +16,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/patients', icon: Users, label: 'Patients' },
   { href: '/appointments', icon: Calendar, label: 'Appointments' },
+  { href: '/health-tips', icon: Stethoscope, label: 'Health Tips' },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {
