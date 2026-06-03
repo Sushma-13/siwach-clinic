@@ -1,0 +1,199 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import {
+  Users, Calendar, Flame, RefreshCw, TrendingUp,
+  Phone, Clock, Loader2, ChevronLeft, ChevronRight, X,
+} from 'lucide-react';
+import { format, addDays, startOfWeek, isToday, parseISO } from 'date-fns';
+
+const DashboardCharts = dynamic(() => import('@/components/DashboardCharts'), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="card lg:col-span-7 flex items-center justify-center h-[280px]">
+        <Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
+      </div>
+      <div className="card lg:col-span-5 flex items-center justify-center h-[280px]">
+        <Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
+      </div>
+    </div>
+  ),
+});
+
+interface KPI {
+  total_patients: number;
+  todays_appointments: number;
+  new_leads_mtd: number;
+  return_patients: number;
+  hot_leads_mtd: number;
+}
+
+interface ChartRow { month: string; appointments: number; leads: number; }
+interface DoctorRow { name: string; value: number; }
+
+interface Lead { /* trimmed for brevity */ }
+
+const CAMPAIGNS = [
+  { id: 'post_visit',    label: 'Post-visit Follow-up',    desc: 'All visits from last 48 hrs',         icon: '✉️' },
+  { id: 'reminder_24h', label: 'Reminder — 24 hr Prior',   desc: "Tomorrow's appointments",             icon: '🔔' },
+  { id: 'reminder_2h',  label: 'Reminder — 2 hr Prior',    desc: 'Next 2 hrs appointments',             icon: '⏰' },
+  { id: 'reengagement', label: 'Re-engagement Campaign',   desc: 'Inactive 3+ days',                    icon: '🔄' },
+  { id: 'reviews',      label: 'Google Reviews Bot',       desc: 'Post-visit review request',           icon: '⭐' },
+  { id: 'health_tips',  label: 'Health Tip Broadcast',     desc: 'All active patients',                 icon: '💚' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  open: 'badge-primary',
+  closed: 'badge-success',
+  lost: 'badge-danger',
+};
+
+function formatTime(ts: string | null) {
+  if (!ts) return null;
+  const d = new Date(ts);
+  const h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+export default function DashboardPage() {
+  const [kpi, setKpi] = useState<KPI | null>(null);
+  const [chartData, setChartData] = useState<ChartRow[]>([]);
+  const [doctorDist, setDoctorDist] = useState<DoctorRow[]>([]);
+  const [dashLoading, setDashLoading] = useState(true);
+
+  const [leads, setLeads] = useState<any[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(true);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [weekBase, setWeekBase] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [weekCounts, setWeekCounts] = useState<Record<string, number>>({});
+
+  const [campaigns, setCampaigns] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(CAMPAIGNS.map(c => [c.id, true]))
+  );
+
+  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekBase, i));
+
+  function prevWeek() { const nb = addDays(weekBase, -7); setWeekBase(nb); setSelectedDate(format(nb, 'yyyy-MM-dd')); }
+  function nextWeek() { const nb = addDays(weekBase, 7); setWeekBase(nb); setSelectedDate(format(nb, 'yyyy-MM-dd')); }
+
+  useEffect(() => {
+    fetch('/api/dashboard')
+      .then(r => r.json())
+      .then(d => {
+        if (d.data) {
+          setKpi(d.data.kpi);
+          setChartData(d.data.chartData || []);
+          setDoctorDist(d.data.doctorDist || []);
+        }
+      })
+      .finally(() => setDashLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const start = format(weekDates[0], 'yyyy-MM-dd');
+    const end = format(weekDates[6], 'yyyy-MM-dd');
+    fetch(`/api/leads?start=${start}&end=${end}`)
+      .then(r => r.json())
+      .then(d => {
+        const map: Record<string, number> = {};
+        (d.data || []).forEach((row: { date: string; count: number }) => { map[row.date] = row.count; });
+        setWeekCounts(map);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekBase]);
+
+  useEffect(() => {
+    setLeadsLoading(true);
+    fetch(`/api/leads?date=${selectedDate}`)
+      .then(r => r.json())
+      .then(d => setLeads(d.data || []))
+      .finally(() => setLeadsLoading(false));
+  }, [selectedDate]);
+
+  const kpiCards = kpi ? [
+    { label: 'Total Patients',        value: kpi.total_patients,       icon: Users,       color: '#4a8c4a', bg: '#e8f0eb' },
+    { label: "Today's Appointments",  value: kpi.todays_appointments,  icon: Calendar,    color: '#e8940a', bg: '#fef4e8' },
+    { label: 'New Leads MTD',         value: kpi.new_leads_mtd,        icon: TrendingUp,  color: '#7c6ab5', bg: '#f0edf9' },
+    { label: 'Return Patients',       value: kpi.return_patients,      icon: RefreshCw,   color: '#2d7d94', bg: '#e8f5f8' },
+    { label: 'Hot Leads MTD',         value: kpi.hot_leads_mtd,        icon: Flame,       color: '#c0392b', bg: '#fdecea' },
+  ] : [];
+
+  return (
+    <div className="space-y-8">
+      {dashLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {kpiCards.map((card, i) => (
+            <div key={i} className="card animate-slide-up" style={{ animationDelay: `${i * 60}ms` }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: card.bg }}>
+                <card.icon size={18} style={{ color: card.color }} />
+              </div>
+              <p className="text-3xl font-display font-semibold" style={{ color: 'var(--color-text)' }}>{card.value}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-muted)' }}>{card.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!dashLoading && (
+        <DashboardCharts chartData={chartData} doctorDist={doctorDist} />
+      )}
+
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-semibold text-base" style={{ color: 'var(--color-text)' }}>Patient Leads</h2>
+          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{format(weekDates[0], 'd MMM')} – {format(weekDates[6], 'd MMM yyyy')}</span>
+        </div>
+
+        <div className="card p-3 mb-4">
+          <div className="flex items-center gap-2">
+            <button onClick={prevWeek} className="flex-shrink-0 p-2 rounded-lg transition-colors hover:bg-[#f0ece6]" style={{ color: 'var(--color-text-muted)' }}><ChevronLeft size={16} /></button>
+            <div className="flex gap-1.5 overflow-x-auto flex-1">
+              {weekDates.map(date => {
+                const dateStr = format(date, 'yyyy-MM-dd');
+                const isSelected = dateStr === selectedDate;
+                const todayDate = isToday(date);
+                const count = weekCounts[dateStr];
+                return (
+                  <button key={dateStr} onClick={() => setSelectedDate(dateStr)} className="flex flex-col items-center px-3 py-2.5 rounded-xl min-w-[60px] transition-all duration-150 flex-1" style={{ background: isSelected ? 'var(--color-primary)' : todayDate ? 'var(--color-primary-light)' : 'transparent', color: isSelected ? 'white' : todayDate ? 'var(--color-primary-dark)' : 'var(--color-text-muted)' }}>
+                    <span className="text-xs uppercase font-medium">{format(date, 'EEE')}</span>
+                    <span className="text-lg font-display font-semibold">{format(date, 'd')}</span>
+                    {count ? <span className="text-[10px] font-semibold mt-0.5 px-1.5 py-0.5 rounded-full" style={{ background: isSelected ? 'rgba(255,255,255,0.3)' : '#4a8c4a', color: 'white', lineHeight: '1' }}>{count}</span> : <span className="mt-0.5 h-[16px]" />}
+                  </button>
+                );
+              })}
+            </div>
+            <button onClick={nextWeek} className="flex-shrink-0 p-2 rounded-lg transition-colors hover:bg-[#f0ece6]" style={{ color: 'var(--color-text-muted)' }}><ChevronRight size={16} /></button>
+          </div>
+        </div>
+
+        <div className="card p-0 overflow-hidden">
+          {leadsLoading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 size={22} className="animate-spin" style={{ color: 'var(--color-primary)' }} /></div>
+          ) : leads.length === 0 ? (
+            <div className="text-center py-12"><TrendingUp size={36} className="mx-auto mb-3 opacity-25" style={{ color: 'var(--color-text-muted)' }} /><p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>No leads for this date</p></div>
+          ) : (
+            <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="grid grid-cols-12 gap-3 px-5 py-3 text-xs font-medium" style={{ background: 'var(--color-surface-2)', color: 'var(--color-text-muted)' }}>
+                <div className="col-span-3">PATIENT</div>
+                <div className="col-span-3 hidden sm:block">CONCERN</div>
+                <div className="col-span-2 hidden md:block">DOCTOR</div>
+                <div className="col-span-2 hidden md:block">APPT TIME</div>
+                <div className="col-span-1">STATUS</div>
+                <div className="col-span-1">HOT</div>
+              </div>
+              {/* list trimmed for brevity in this copy */}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

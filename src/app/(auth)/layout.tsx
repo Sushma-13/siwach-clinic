@@ -3,11 +3,10 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
-  // Next.js 16: cookies() is async - must be awaited
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('siwach_auth_token')?.value
- 
+
   if (!token) redirect('/login')
   const user = verifyToken(token)
   if (!user) redirect('/login')
