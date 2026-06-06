@@ -299,20 +299,151 @@ export default function AppointmentsPage() {
                       </p>
                       {appt.patient_phone && (
                         <p className="text-xs flex items-center gap-1" style={{ color: 'var(--color-text-muted)' }}>
-                          <Phone size={11} />{appt.patient_phone}
+                          <Phone size={10} />
+                          {appt.patient_phone}
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="col-span-3 hidden sm:block text-sm text-muted">{appt.description}</div>
-                  <div className="col-span-2 hidden md:block">{appt.doctor_name}</div>
-                  <div className="col-span-1"><span className={`badge ${sc.cls}`}>{sc.label}</span></div>
+                  <div className="col-span-3 hidden sm:block">
+                    <p className="text-sm truncate" style={{ color: 'var(--color-text-muted)' }}>
+                      {appt.description || '—'}
+                    </p>
+                  </div>
+                  <div className="col-span-2 hidden md:block">
+                    <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                      {appt.doctor_name || '—'}
+                    </p>
+                  </div>
+                  <div className="col-span-1">
+                    <span className={`badge ${sc.cls}`}>{sc.label}</span>
+                  </div>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* New Appointment Modal */}
+      {showNewAppt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowNewAppt(false)} />
+          <div className="relative card w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="font-display text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+                Schedule Appointment
+              </h2>
+              <button onClick={() => setShowNewAppt(false)} className="p-2 rounded-lg"
+                style={{ color: 'var(--color-text-muted)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAppt} className="space-y-4">
+              {/* Patient search */}
+              <div ref={patientSearchRef} className="relative">
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                  Patient *
+                </label>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
+                    style={{ color: 'var(--color-text-light)' }} />
+                  <input
+                    value={patientSearch}
+                    onChange={e => { setPatientSearch(e.target.value); setForm(f => ({ ...f, patient_uhid: '', patient_label: '' })); }}
+                    onFocus={() => patientResults.length > 0 && setShowPatientDropdown(true)}
+                    placeholder="Search by name or phone..."
+                    className="input-field pl-9"
+                  />
+                  {patientSearching && (
+                    <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin"
+                      style={{ color: 'var(--color-primary)' }} />
+                  )}
+                </div>
+                {showPatientDropdown && patientResults.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 rounded-xl shadow-lg overflow-hidden"
+                    style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                    {patientResults.map(p => (
+                      <button key={p.patient_uhid} type="button" onClick={() => selectPatient(p)}
+                        className="w-full text-left px-4 py-3 text-sm transition-colors hover:bg-[#f8f6f1]">
+                        <span className="font-medium" style={{ color: 'var(--color-text)' }}>{p.full_name}</span>
+                        <span className="ml-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                          #{p.patient_uhid} · {p.whatsapp_no || p.phone_no || '—'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {form.patient_uhid && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--color-primary)' }}>
+                    ✓ Selected: {form.patient_label} (UHID #{form.patient_uhid})
+                  </p>
+                )}
+              </div>
+
+              {/* Doctor */}
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                  Doctor *
+                </label>
+                <select value={form.doctor_name} onChange={e => setForm({ ...form, doctor_name: e.target.value })}
+                  className="input-field" required>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.doctor_name}>{d.doctor_name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                    Date *
+                  </label>
+                  <input type="date" value={form.appointment_date}
+                    onChange={e => setForm({ ...form, appointment_date: e.target.value })}
+                    className="input-field" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                    Time *
+                  </label>
+                  <select value={form.appointment_time}
+                    onChange={e => setForm({ ...form, appointment_time: e.target.value })}
+                    className="input-field">
+                    {times.map(t => <option key={t} value={t}>{formatTime(t)}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
+                  Description
+                </label>
+                <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                  className="input-field" placeholder="e.g. Knee pain, follow-up visit..." />
+              </div>
+
+              {formError && (
+                <div className="px-4 py-3 rounded-xl text-sm"
+                  style={{ background: 'var(--color-danger-light)', color: 'var(--color-danger)' }}>
+                  {formError}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setShowNewAppt(false)} className="btn-secondary flex-1 justify-center">
+                  Cancel
+                </button>
+                <button type="submit" disabled={submitting} className="btn-primary flex-1 justify-center">
+                  {submitting ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                  {submitting ? 'Scheduling...' : 'Schedule'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
