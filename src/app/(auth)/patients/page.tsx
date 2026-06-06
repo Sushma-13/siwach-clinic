@@ -62,7 +62,6 @@ export default function PatientsPage() {
     return () => clearTimeout(timer);
   }, [fetchPatients]);
 
-  // Reset to page 1 when search changes
   useEffect(() => { setPage(1); }, [search]);
 
   return (
@@ -81,18 +80,10 @@ export default function PatientsPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2"
-          style={{ color: 'var(--color-text-light)' }} />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search by name, phone, or email..."
-          className="input-field pl-11 pr-11"
-        />
+        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-text-light)' }} />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, phone, or email..." className="input-field pl-11 pr-11" />
         {search && (
-          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg"
-            style={{ color: 'var(--color-text-light)' }}>
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg" style={{ color: 'var(--color-text-light)' }}>
             <X size={14} />
           </button>
         )}
@@ -102,51 +93,22 @@ export default function PatientsPage() {
       <div className="card p-0 overflow-hidden">
         {/* Pagination bar */}
         {pages > 1 && (
-          <div className="flex items-center justify-between px-6 py-3"
-            style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-              {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total} patients
-            </p>
+          <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total} patients</p>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="btn-secondary px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>
-                {page} / {pages}
-              </span>
-              <button
-                onClick={() => setPage(p => Math.min(pages, p + 1))}
-                disabled={page === pages}
-                className="btn-secondary px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronRight size={14} />
-              </button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-secondary px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronLeft size={14} /></button>
+              <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>{page} / {pages}</span>
+              <button onClick={() => setPage(p => Math.min(pages, p + 1))} disabled={page === pages} className="btn-secondary px-2 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"><ChevronRight size={14} /></button>
             </div>
           </div>
         )}
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-primary)' }} />
-          </div>
+          <div className="flex items-center justify-center py-16"><Loader2 size={24} className="animate-spin" style={{ color: 'var(--color-primary)' }} /></div>
         ) : patients.length === 0 ? (
-          <div className="text-center py-16">
-            <Users size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--color-text-muted)' }} />
-            <p className="font-medium mb-1" style={{ color: 'var(--color-text)' }}>
-              {search ? 'No patients found' : 'No patients yet'}
-            </p>
-            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-              {search ? 'Try a different search term' : 'No records in the database'}
-            </p>
-          </div>
+          <div className="text-center py-16"><Users size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--color-text-muted)' }} /><p className="font-medium mb-1" style={{ color: 'var(--color-text)' }}>{search ? 'No patients found' : 'No patients yet'}</p><p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>{search ? 'Try a different search term' : 'No records in the database'}</p></div>
         ) : (
           <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-            {/* Table header */}
-            <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-medium"
-              style={{ color: 'var(--color-text-muted)', background: 'var(--color-surface-2)' }}>
+            <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-medium" style={{ color: 'var(--color-text-muted)', background: 'var(--color-surface-2)' }}>
               <div className="col-span-5">PATIENT</div>
               <div className="col-span-3 hidden sm:block">CONTACT</div>
               <div className="col-span-3 hidden md:block">UHID</div>
@@ -158,45 +120,14 @@ export default function PatientsPage() {
               const contact = patient.whatsapp_no || patient.phone_no;
 
               return (
-                <Link
-                  key={patient.patient_uhid}
-                  href={`/patients/${patient.patient_uhid}`}
-                  className="grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors hover:bg-[#f8f6f1]"
-                >
-                  {/* Patient name */}
+                <Link key={patient.patient_uhid} href={`/patients/${patient.patient_uhid}`} className="grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors hover:bg-[#f8f6f1]">
                   <div className="col-span-5 flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-                      style={{ background: bg, color: fg }}>
-                      {getInitials(patient.full_name)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
-                        {patient.full_name}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                        {[patient.age_dob, patient.gender, patient.blood_group].filter(Boolean).join(' · ') || '—'}
-                      </p>
-                    </div>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0" style={{ background: bg, color: fg }}>{getInitials(patient.full_name)}</div>
+                    <div className="min-w-0"><p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>{patient.full_name}</p><p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{[patient.age_dob, patient.gender, patient.blood_group].filter(Boolean).join(' · ') || '—'}</p></div>
                   </div>
-
-                  {/* Contact */}
-                  <div className="col-span-3 hidden sm:flex items-center gap-1.5">
-                    <Phone size={12} style={{ color: 'var(--color-text-light)' }} />
-                    <span className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>
-                      {contact || '—'}
-                    </span>
-                  </div>
-
-                  {/* UHID */}
-                  <div className="col-span-3 hidden md:block">
-                    <span className="badge badge-neutral">
-                      #{patient.patient_uhid}
-                    </span>
-                  </div>
-
-                  <div className="col-span-1 flex justify-end">
-                    <ChevronRight size={15} style={{ color: 'var(--color-text-light)' }} />
-                  </div>
+                  <div className="col-span-3 hidden sm:flex items-center gap-1.5"><Phone size={12} style={{ color: 'var(--color-text-light)' }} /><span className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{contact || '—'}</span></div>
+                  <div className="col-span-3 hidden md:block"><span className="badge badge-neutral">#{patient.patient_uhid}</span></div>
+                  <div className="col-span-1 flex justify-end"><ChevronRight size={15} style={{ color: 'var(--color-text-light)' }} /></div>
                 </Link>
               );
             })}
