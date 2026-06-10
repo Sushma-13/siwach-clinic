@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, Calendar, Stethoscope,
-  LogOut, Menu, X, ChevronRight
+  LogOut, Menu, X, ChevronRight, Flame, HelpCircle
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -16,6 +16,8 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/patients', icon: Users, label: 'Patients' },
   { href: '/appointments', icon: Calendar, label: 'Appointments' },
+  { href: '/hot-leads', icon: Flame, label: 'Hot Leads' },
+  { href: '/faq', icon: HelpCircle, label: 'FAQ' },
   { href: '/health-tips', icon: Stethoscope, label: 'Health Tips' },
 ];
 

@@ -94,6 +94,12 @@ body {
   .badge-neutral { background: var(--color-surface-2); color: var(--color-text-muted); }
 }
 
+@layer utilities {
+  .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+}
+
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }

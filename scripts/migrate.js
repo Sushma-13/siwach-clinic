@@ -63,11 +63,22 @@ CREATE TABLE IF NOT EXISTS appointmentss (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- FAQ table
+CREATE TABLE IF NOT EXISTS faq (
+  id SERIAL PRIMARY KEY,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  category VARCHAR(100),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(last_name, first_name);
 CREATE INDEX IF NOT EXISTS idx_visits_patient ON visits(patient_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointmentss(appointment_date);
 CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointmentss(patient_id);
+CREATE INDEX IF NOT EXISTS idx_faq_category ON faq(category);
 
 -- Updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -91,6 +102,11 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
   CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointmentss
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TRIGGER update_faq_updated_at BEFORE UPDATE ON faq
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 `;
