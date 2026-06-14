@@ -3,7 +3,10 @@ import { queryOne } from '@/lib/db'
 import { verifyToken, COOKIE_NAME } from '@/lib/auth'
 
 function getUser(req: NextRequest) {
-  const token = req.cookies.get(COOKIE_NAME)?.value
+  // Support token from either an HTTP-only cookie or an Authorization header
+  const authHeader = req.headers.get('authorization') || ''
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const token = bearer ?? req.cookies.get(COOKIE_NAME)?.value
   if (!token) return null
   return verifyToken(token)
 }
@@ -70,7 +73,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (user.role !== 'admin') return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 })
 
   const { id: idStr } = await params
   const id = parseInt(idStr, 10)

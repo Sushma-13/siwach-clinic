@@ -14,8 +14,11 @@ export async function GET(req: NextRequest) {
   try {
     // Week counts mode — grouped by start_day
     if (start && end) {
-      const counts = await query<{ date: string; count: number }>(`
-        SELECT TO_CHAR(start_day, 'YYYY-MM-DD') AS date, COUNT(*)::int AS count
+      const counts = await query<{ date: string; count: number; hot_count: number }>(`
+        SELECT
+          TO_CHAR(start_day, 'YYYY-MM-DD') AS date,
+          COUNT(*)::int AS count,
+          COUNT(*) FILTER (WHERE hot_lead = true)::int AS hot_count
         FROM patient_leads
         WHERE start_day >= $1::date AND start_day <= $2::date
         GROUP BY start_day

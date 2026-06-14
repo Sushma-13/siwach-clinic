@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 import {
   Users, Calendar, Flame, RefreshCw, TrendingUp,
   Phone, Clock, Loader2, ChevronLeft, ChevronRight, X,
@@ -86,6 +87,7 @@ function formatTime(ts: string | null) {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [kpi, setKpi] = useState<KPI | null>(null);
   const [chartData, setChartData] = useState<ChartRow[]>([]);
   const [doctorDist, setDoctorDist] = useState<DoctorRow[]>([]);
@@ -96,7 +98,7 @@ export default function DashboardPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [weekBase, setWeekBase] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
-  const [weekCounts, setWeekCounts] = useState<Record<string, number>>({});
+  const [weekCounts, setWeekCounts] = useState<Record<string, { count: number; hot_count: number }>>({});
 
   const [campaigns, setCampaigns] = useState<Record<string, boolean>>(
     () => Object.fromEntries(CAMPAIGNS.map(c => [c.id, true]))
@@ -136,8 +138,10 @@ export default function DashboardPage() {
     fetch(`/api/leads?start=${start}&end=${end}`)
       .then(r => r.json())
       .then(d => {
-        const map: Record<string, number> = {};
-        (d.data || []).forEach((row: { date: string; count: number }) => { map[row.date] = row.count; });
+        const map: Record<string, { count: number; hot_count: number }> = {};
+        (d.data || []).forEach((row: { date: string; count: number; hot_count: number }) => {
+          map[row.date] = { count: row.count, hot_count: row.hot_count };
+        });
         setWeekCounts(map);
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -196,9 +200,18 @@ export default function DashboardPage() {
           <h2 className="font-display font-semibold text-base" style={{ color: 'var(--color-text)' }}>
             Patient Leads
           </h2>
-          <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            {format(weekDates[0], 'd MMM')} – {format(weekDates[6], 'd MMM yyyy')}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm hidden sm:block" style={{ color: 'var(--color-text-muted)' }}>
+              {format(weekDates[0], 'd MMM')} – {format(weekDates[6], 'd MMM yyyy')}
+            </span>
+            <button
+              onClick={() => router.push('/hot-leads?new=1')}
+              className="btn-primary inline-flex items-center gap-1.5 text-sm py-1.5 px-3"
+            >
+              <Flame size={14} />
+              Add Hot Lead
+            </button>
+          </div>
         </div>
 
         {/* Week calendar with prev/next */}
@@ -214,7 +227,9 @@ export default function DashboardPage() {
                 const dateStr = format(date, 'yyyy-MM-dd');
                 const isSelected = dateStr === selectedDate;
                 const todayDate = isToday(date);
-                const count = weekCounts[dateStr];
+                const dayData = weekCounts[dateStr];
+                const count = dayData?.count;
+                const hotCount = dayData?.hot_count;
                 return (
                   <button key={dateStr} onClick={() => setSelectedDate(dateStr)}
                     className="flex flex-col items-center px-3 py-2.5 rounded-xl min-w-[60px] transition-all duration-150 flex-1"
@@ -225,13 +240,24 @@ export default function DashboardPage() {
                     <span className="text-xs uppercase font-medium">{format(date, 'EEE')}</span>
                     <span className="text-lg font-display font-semibold">{format(date, 'd')}</span>
                     {count ? (
-                      <span className="text-[10px] font-semibold mt-0.5 px-1.5 py-0.5 rounded-full"
-                        style={{
-                          background: isSelected ? 'rgba(255,255,255,0.3)' : '#4a8c4a',
-                          color: 'white', lineHeight: '1',
-                        }}>
-                        {count}
-                      </span>
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap justify-center">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: isSelected ? 'rgba(255,255,255,0.3)' : '#4a8c4a',
+                            color: 'white', lineHeight: '1',
+                          }}>
+                          {count}
+                        </span>
+                        {hotCount ? (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{
+                              background: isSelected ? 'rgba(255,100,80,0.5)' : '#c0392b',
+                              color: 'white', lineHeight: '1',
+                            }}>
+                            🔥{hotCount}
+                          </span>
+                        ) : null}
+                      </div>
                     ) : <span className="mt-0.5 h-[16px]" />}
                   </button>
                 );

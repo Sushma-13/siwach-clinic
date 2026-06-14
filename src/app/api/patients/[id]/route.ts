@@ -13,7 +13,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Next.js 16: params is a Promise, must be awaited
   const { id: idStr } = await params
   const id = parseInt(idStr)
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 })
@@ -29,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-// PUT /api/patients/[id]
+// PUT /api/patients/[id] — update patient_master_data
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = getUser(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -40,29 +39,80 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const body = await req.json()
-    const { first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact_name, emergency_contact_phone } = body
+    const {
+      full_name, age_dob, gender, whatsapp_no, phone_no,
+      email, blood_group, address, relation, marital_status, preferred_language,
+    } = body
+
+    if (!full_name?.trim()) {
+      return NextResponse.json({ error: 'Full name is required' }, { status: 400 })
+    }
 
     const patient = await queryOne(
-      `UPDATE patients SET
-        first_name = COALESCE($1, first_name),
-        last_name = COALESCE($2, last_name),
-        date_of_birth = COALESCE($3, date_of_birth),
-        gender = COALESCE($4, gender),
-        phone = COALESCE($5, phone),
-        email = COALESCE($6, email),
-        address = COALESCE($7, address),
-        blood_group = COALESCE($8, blood_group),
-        emergency_contact_name = COALESCE($9, emergency_contact_name),
-        emergency_contact_phone = COALESCE($10, emergency_contact_phone),
-        updated_at = NOW()
-       WHERE id = $11 RETURNING *`,
-      [first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact_name, emergency_contact_phone, id]
+      `UPDATE patient_master_data SET
+        full_name         = $1,
+        age_dob           = $2,
+        gender            = $3,
+        whatsapp_no       = $4,
+        phone_no          = $5,
+        email             = $6,
+        blood_group       = $7,
+        address           = $8,
+        relation          = $9,
+        marital_status    = $10,
+        preferred_language = $11
+       WHERE patient_uhid = $12
+       RETURNING *`,
+      [
+        full_name.trim(),
+        age_dob || null,
+        gender || null,
+        whatsapp_no || null,
+        phone_no || null,
+        email || null,
+        blood_group || null,
+        address || null,
+        relation || null,
+        marital_status || null,
+        preferred_language || null,
+        id,
+      ]
     )
 
     if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     return NextResponse.json({ data: patient, message: 'Patient updated successfully' })
   } catch (err) {
     console.error('PUT patient error:', err)
+    return NextResponse.json({ error: 'Failed to update patient' }, { status: 500 })
+  }
+}
+
+// PATCH /api/patients/[id] — update feedback_type only
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const user = getUser(req)
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id: idStr } = await params
+  const id = parseInt(idStr)
+  if (isNaN(id)) return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 })
+
+  try {
+    const body = await req.json()
+    const { feedback_type } = body
+
+    if (feedback_type !== null && feedback_type !== 'GFORM' && feedback_type !== 'GREVIEW') {
+      return NextResponse.json({ error: 'Invalid feedback_type' }, { status: 400 })
+    }
+
+    const patient = await queryOne(
+      `UPDATE patient_master_data SET feedback_type = $1 WHERE patient_uhid = $2 RETURNING patient_uhid, feedback_type`,
+      [feedback_type, id]
+    )
+
+    if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
+    return NextResponse.json({ data: patient, message: 'Feedback type updated' })
+  } catch (err) {
+    console.error('PATCH patient error:', err)
     return NextResponse.json({ error: 'Failed to update patient' }, { status: 500 })
   }
 }
@@ -78,7 +128,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 })
 
   try {
-    const result = await queryOne<{ id: number }>('DELETE FROM patients WHERE id = $1 RETURNING id', [id])
+    const result = await queryOne<{ patient_uhid: number }>(
+      'DELETE FROM patient_master_data WHERE patient_uhid = $1 RETURNING patient_uhid',
+      [id]
+    )
     if (!result) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     return NextResponse.json({ message: 'Patient deleted successfully' })
   } catch (err) {

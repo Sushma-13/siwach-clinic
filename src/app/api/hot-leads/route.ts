@@ -14,17 +14,20 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url)
   const search = searchParams.get('search') || ''
+  const hotOnly = searchParams.get('hot') === 'true'
   const page = parseInt(searchParams.get('page') ?? '1', 10)
   const limit = parseInt(searchParams.get('limit') ?? '10', 10)
   const offset = (page - 1) * limit
 
   try {
-    const searchCondition = search
-      ? `AND (p.full_name ILIKE $3 OR p.whatsapp_no ILIKE $3 OR l.concern ILIKE $3 OR l.booked_against ILIKE $3 OR l.status ILIKE $3 OR l.summary ILIKE $3)`
-      : ''
-
     const params: unknown[] = [limit, offset]
-    if (search) params.push(`%${search}%`)
+    const conditions: string[] = []
+    if (hotOnly) conditions.push('l.hot_lead = true')
+    if (search) {
+      params.push(`%${search}%`)
+      conditions.push(`(p.full_name ILIKE $${params.length} OR p.whatsapp_no ILIKE $${params.length} OR p.patient_uhid::text ILIKE $${params.length})`)
+    }
+    const searchWhere = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const leads = await query(
       `SELECT l.lead_id, l.patient_id, l.start_day, l.end_day, l.appointment_time,
@@ -34,21 +37,25 @@ export async function GET(req: NextRequest) {
               p.full_name AS patient_name, p.whatsapp_no AS patient_phone
        FROM patient_leads l
        LEFT JOIN patient_master_data p ON p.patient_uhid = l.patient_id::integer
-       WHERE 1=1 ${searchCondition}
+       ${searchWhere}
        ORDER BY l.updated_at DESC
        LIMIT $1 OFFSET $2`,
       params
     )
 
-    const countParams = search ? [`%${search}%`] : []
-    const countCondition = search
-      ? `WHERE (p.full_name ILIKE $1 OR p.whatsapp_no ILIKE $1 OR l.concern ILIKE $1 OR l.booked_against ILIKE $1 OR l.status ILIKE $1 OR l.summary ILIKE $1)`
-      : ''
+    const countParams: unknown[] = []
+    const countConditions: string[] = []
+    if (hotOnly) countConditions.push('l.hot_lead = true')
+    if (search) {
+      countParams.push(`%${search}%`)
+      countConditions.push(`(p.full_name ILIKE $${countParams.length} OR p.whatsapp_no ILIKE $${countParams.length} OR p.patient_uhid::text ILIKE $${countParams.length})`)
+    }
+    const countWhere = countConditions.length ? `WHERE ${countConditions.join(' AND ')}` : ''
 
     const [{ count }] = await query<{ count: string }>(
       `SELECT COUNT(*)::text AS count FROM patient_leads l
        LEFT JOIN patient_master_data p ON p.patient_uhid = l.patient_id::integer
-       ${countCondition}`,
+       ${countWhere}`,
       countParams
     )
 
@@ -95,7 +102,7 @@ export async function POST(req: NextRequest) {
          booked_against, hot_lead, forwarded_to, forwarded_time,
          summary, status, last_reengaged_at, reengagement_count,
          manually_added, created_at, updated_at
-       ) VALUES ($1, $2::date, $3::date, $4, $5, $6, $7, $8, $9, $10, $11, $12::timestamp, $13, true, NOW(), NOW())
+       ) VALUES ($1, $2::date, $3::date, $4::timestamp, $5, $6, $7, $8, $9, $10, $11, $12::timestamp, $13, true, NOW(), NOW())
        RETURNING *`,
       [
         patient_id,
@@ -111,7 +118,6 @@ export async function POST(req: NextRequest) {
         status || null,
         last_reengaged_at || null,
         reengagement_count ?? 0,
-        manually_added === true,
       ]
     )
 
