@@ -40,23 +40,60 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   try {
     const body = await req.json()
-    const { first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact_name, emergency_contact_phone } = body
+    const {
+      full_name,
+      age_dob,
+      gender,
+      whatsapp_no,
+      relation,
+      phone_no: body_phone_no,
+      phone,
+      email,
+      blood_group,
+      marital_status,
+      preferred_language,
+      address,
+      feedback_type,
+    } = body
+
+    const phone_no = body_phone_no ?? phone ?? null
+    const validFeedbackTypes = new Set(['','GREVIEW', 'GFORM'])
+    if (feedback_type !== undefined && feedback_type !== null && !validFeedbackTypes.has(feedback_type)) {
+      return NextResponse.json({ error: 'Invalid feedback type' }, { status: 400 })
+    }
 
     const patient = await queryOne(
-      `UPDATE patients SET
-        first_name = COALESCE($1, first_name),
-        last_name = COALESCE($2, last_name),
-        date_of_birth = COALESCE($3, date_of_birth),
-        gender = COALESCE($4, gender),
-        phone = COALESCE($5, phone),
-        email = COALESCE($6, email),
-        address = COALESCE($7, address),
+      `UPDATE patient_master_data SET
+        full_name = COALESCE($1, full_name),
+        age_dob = COALESCE($2, age_dob),
+        gender = COALESCE($3, gender),
+        whatsapp_no = COALESCE($4, whatsapp_no),
+        relation = COALESCE($5, relation),
+        phone_no = COALESCE($6, phone_no),
+        email = COALESCE($7, email),
         blood_group = COALESCE($8, blood_group),
-        emergency_contact_name = COALESCE($9, emergency_contact_name),
-        emergency_contact_phone = COALESCE($10, emergency_contact_phone),
+        marital_status = COALESCE($9, marital_status),
+        preferred_language = COALESCE($10, preferred_language),
+        address = COALESCE($11, address),
+        feedback_type = COALESCE($12, feedback_type),
         updated_at = NOW()
-       WHERE id = $11 RETURNING *`,
-      [first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact_name, emergency_contact_phone, id]
+       WHERE patient_uhid = $13
+       RETURNING *`,
+      [
+        full_name,
+        age_dob,
+        gender,
+        whatsapp_no,
+        relation,
+        phone_no,
+        email,
+        blood_group,
+        marital_status,
+        preferred_language,
+        address,
+        feedback_type,
+        id,
+      ]
     )
 
     if (!patient) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
@@ -78,7 +115,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (isNaN(id)) return NextResponse.json({ error: 'Invalid patient ID' }, { status: 400 })
 
   try {
-    const result = await queryOne<{ id: number }>('DELETE FROM patients WHERE id = $1 RETURNING id', [id])
+    const result = await queryOne<{ id: number }>('DELETE FROM patient_master_data WHERE patient_uhid = $1 RETURNING patient_uhid', [id])
     if (!result) return NextResponse.json({ error: 'Patient not found' }, { status: 404 })
     return NextResponse.json({ message: 'Patient deleted successfully' })
   } catch (err) {
