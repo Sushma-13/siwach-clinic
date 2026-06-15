@@ -57,17 +57,6 @@ interface Lead {
   last_reengaged_at: string | null;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const CAMPAIGNS = [
-  { id: 'post_visit',    label: 'Post-visit Follow-up',    desc: 'All visits from last 48 hrs',         icon: '✉️' },
-  { id: 'reminder_24h', label: 'Reminder — 24 hr Prior',   desc: "Tomorrow's appointments",             icon: '🔔' },
-  { id: 'reminder_2h',  label: 'Reminder — 2 hr Prior',    desc: 'Next 2 hrs appointments',             icon: '⏰' },
-  { id: 'reengagement', label: 'Re-engagement Campaign',   desc: 'Inactive 3+ days',                    icon: '🔄' },
-  { id: 'reviews',      label: 'Google Reviews Bot',       desc: 'Post-visit review request',           icon: '⭐' },
-  { id: 'health_tips',  label: 'Health Tip Broadcast',     desc: 'All active patients',                 icon: '💚' },
-];
-
 const STATUS_COLORS: Record<string, string> = {
   open: 'badge-primary',
   closed: 'badge-success',
@@ -99,10 +88,6 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [weekBase, setWeekBase] = useState<Date>(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [weekCounts, setWeekCounts] = useState<Record<string, { count: number; hot_count: number }>>({});
-
-  const [campaigns, setCampaigns] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(CAMPAIGNS.map(c => [c.id, true]))
-  );
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekBase, i));
 
@@ -460,38 +445,6 @@ export default function DashboardPage() {
           </div>
         );
       })()}
-
-      {/* ── Campaign Switches ── */}
-      <div>
-        <h2 className="font-display font-semibold text-base mb-4" style={{ color: 'var(--color-text)' }}>
-          Campaign Switches
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {CAMPAIGNS.map(c => (
-            <div key={c.id} className="card flex items-center justify-between gap-4 py-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-xl flex-shrink-0">{c.icon}</span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-                    {c.label}
-                  </p>
-                  <p className="text-xs truncate" style={{ color: 'var(--color-text-muted)' }}>{c.desc}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setCampaigns(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
-                className="flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200"
-                style={{ background: campaigns[c.id] ? '#4a8c4a' : '#d1d5db' }}
-              >
-                <span
-                  className="inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200"
-                  style={{ transform: campaigns[c.id] ? 'translateX(22px)' : 'translateX(4px)' }}
-                />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

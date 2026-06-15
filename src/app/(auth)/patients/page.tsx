@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Search, Users, Phone, ChevronRight, ChevronLeft,
-  Loader2, X, Plus, Edit3,
+  Loader2, X, Plus, Edit3, CheckCircle2, XCircle,
 } from 'lucide-react';
 
 interface Patient {
@@ -21,6 +21,7 @@ interface Patient {
   marital_status: string | null;
   preferred_language: string | null;
   feedback_type: 'GFORM' | 'GREVIEW' | null;
+  followup_sent: boolean;
 }
 
 interface PatientForm {
@@ -65,7 +66,7 @@ function getInitials(name: string) {
   return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
 }
 
-function FeedbackToggle({ patientId, value, onChange }: { patientId: number; value: 'GFORM' | 'GREVIEW' | null; onChange: (v: 'GFORM' | 'GREVIEW' | null) => void }) {
+function FeedbackToggle({ patientId, value, followupSent, onChange }: { patientId: number; value: 'GFORM' | 'GREVIEW' | null; followupSent: boolean; onChange: (v: 'GFORM' | 'GREVIEW' | null) => void }) {
   const [saving, setSaving] = useState(false);
 
   async function select(type: 'GFORM' | 'GREVIEW') {
@@ -84,37 +85,43 @@ function FeedbackToggle({ patientId, value, onChange }: { patientId: number; val
       setSaving(false);
     }
   }
-
+console.log(followupSent, value, 'followupSent, value');
   return (
     <div className="flex items-center gap-1" onClick={e => e.preventDefault()}>
       {saving ? (
         <Loader2 size={14} className="animate-spin" style={{ color: 'var(--color-text-light)' }} />
       ) : (
         <>
-          <button
-            onClick={() => select('GREVIEW')}
-            className="text-xs px-2 py-1 rounded-lg font-medium transition-colors"
-            style={{
-              background: value === 'GREVIEW' ? 'var(--color-primary)' : 'var(--color-surface-2)',
-              color: value === 'GREVIEW' ? '#fff' : 'var(--color-text-muted)',
-              border: '1px solid',
-              borderColor: value === 'GREVIEW' ? 'var(--color-primary)' : 'var(--color-border)',
-            }}
-          >
-            Google Map
-          </button>
-          <button
-            onClick={() => select('GFORM')}
-            className="text-xs px-2 py-1 rounded-lg font-medium transition-colors"
-            style={{
-              background: value === 'GFORM' ? 'var(--color-primary)' : 'var(--color-surface-2)',
-              color: value === 'GFORM' ? '#fff' : 'var(--color-text-muted)',
-              border: '1px solid',
-              borderColor: value === 'GFORM' ? 'var(--color-primary)' : 'var(--color-border)',
-            }}
-          >
-            Google Form
-          </button>
+          {(!followupSent || value === 'GREVIEW') && (
+            <button
+              disabled={followupSent}
+              onClick={() => select('GREVIEW')}
+              className="text-xs px-2 py-1 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: value === 'GREVIEW' ? 'var(--color-primary)' : 'var(--color-surface-2)',
+                color: value === 'GREVIEW' ? '#fff' : 'var(--color-text-muted)',
+                border: '1px solid',
+                borderColor: value === 'GREVIEW' ? 'var(--color-primary)' : 'var(--color-border)',
+              }}
+            >
+              Google Map
+            </button>
+          )}
+          {(!followupSent || value === 'GFORM') && (
+            <button
+              disabled={followupSent}
+              onClick={() => select('GFORM')}
+              className="text-xs px-2 py-1 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                background: value === 'GFORM' ? 'var(--color-primary)' : 'var(--color-surface-2)',
+                color: value === 'GFORM' ? '#fff' : 'var(--color-text-muted)',
+                border: '1px solid',
+                borderColor: value === 'GFORM' ? 'var(--color-primary)' : 'var(--color-border)',
+              }}
+            >
+              Google Form
+            </button>
+          )}
         </>
       )}
     </div>
@@ -303,10 +310,11 @@ export default function PatientsPage() {
           <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
             {/* Table header */}
             <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-medium" style={{ color: 'var(--color-text-muted)', background: 'var(--color-surface-2)' }}>
-              <div className="col-span-4">PATIENT</div>
+              <div className="col-span-3">PATIENT</div>
               <div className="col-span-2 hidden sm:block">CONTACT</div>
               <div className="col-span-1 hidden md:block">UHID</div>
               <div className="col-span-3">GET FEEDBACK</div>
+              <div className="col-span-1">FEEDBACK TRIGGERED</div>
               <div className="col-span-2" />
             </div>
 
@@ -317,7 +325,7 @@ export default function PatientsPage() {
               return (
                 <div key={patient.patient_uhid} className="group grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors hover:bg-[#f8f6f1]">
                   {/* Patient */}
-                  <Link href={`/patients/${patient.patient_uhid}`} className="col-span-4 flex items-center gap-3 min-w-0">
+                  <Link href={`/patients/${patient.patient_uhid}`} className="col-span-3 flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0" style={{ background: bg, color: fg }}>
                       {getInitials(patient.full_name)}
                     </div>
@@ -345,8 +353,17 @@ export default function PatientsPage() {
                     <FeedbackToggle
                       patientId={patient.patient_uhid}
                       value={patient.feedback_type}
+                      followupSent={patient.followup_sent}
                       onChange={v => updateFeedbackType(patient.patient_uhid, v)}
-                    />
+                    /> 
+                  </div>
+
+                  <div className="col-span-1">
+                    {patient.followup_sent ? (
+                      <CheckCircle2 className="w-5 h-5" style={{ color: '#22c55e' }} />
+                    ) : (
+                      <XCircle className="w-5 h-5" style={{ color: '#ef4444' }} />
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -525,7 +542,7 @@ export default function PatientsPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"
+                  className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {submitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
                   {editingId !== null ? 'Save Changes' : 'Add Patient'}
